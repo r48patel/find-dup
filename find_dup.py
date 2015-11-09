@@ -1,16 +1,18 @@
 import sys
 import os
-from os.path import isfile, join, isdir
+from os.path import isfile, join, isdir, getsize
 import md5
 import hashlib
 import time
 import datetime
 import argparse
+import shutil
 import logging
 
 #*********************************************
 # Ideas:
 #   Add more types
+#   Collect how much space was(could be) saved at the end
 #*********************************************
 
 hash_dict = {}
@@ -37,7 +39,7 @@ def is_excluded(file):
 
     return file_ext not in excluded_exts
 
-def find_dups(location, filters, delete_duplicates):
+def find_dups(location, filters, delete_duplicates, delete_empty_folders):
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
     
     for file in onlyfiles:
@@ -61,6 +63,11 @@ def find_dups(location, filters, delete_duplicates):
                 hash_dict[file_hash],
                 join(location, file_name))
 
+    if delete_empty_folders:
+        if len(os.listdir(location)) == 0:
+            shutil.rmtree(location)
+            logger.info("Folder deleted: %s", location)
+
 
 def find_locations(start_location, levels):
     if levels == 1:
@@ -70,6 +77,14 @@ def find_locations(start_location, levels):
         all_folders = [ join(start_location, d) for d in os.listdir(start_location) if isdir(join(start_location, d)) ]
         for folder in all_folders:
             find_locations(folder, levels-1)
+
+def GetHumanReadable(size,precision=2):
+    suffixes=['B','KB','MB','GB','TB']
+    suffixIndex = 0
+    while size > 1024:
+        suffixIndex += 1 #increment the index of the suffix
+        size = size/1024.0 #apply the division
+    return "%.*f %s"%(precision,size,suffixes[suffixIndex])
 
 if __name__== '__main__':
 
@@ -97,11 +112,21 @@ if __name__== '__main__':
                          default=False,
                          action='store_true',
                          dest='delete_duplicates')
+    parser.add_argument('--delete-empty-folders',
+                         help=('Delete any empty folders '
+                               '(default: "%(default)s")'),
+                         default=False,
+                         action='store_true',
+                         dest='delete_empty_folders')
     parser.add_argument('--levels',
                          help=('How many nested levels to itterate from root folder. '
                                '(default: "%(default)s")'),
                          default=1,
                          type=int)
+    parser.add_argument('--custom-locations',
+                         help=('Run scripts on custom location '
+                               'Separate multiple locations with space'),
+                         nargs='+')
     args = parser.parse_args()
 
     filters = [isfile]
@@ -117,8 +142,15 @@ if __name__== '__main__':
         only_ext=args.only_extension
         filters.append(is_custom_ext)
 
-    find_locations(args.location, args.levels)
-    for location in locations:
-        find_dups(location, filters, args.delete_duplicates)
-
+    logger.info("Start!")
     
+    if args.custom_locations:
+        locations = args.custom_locations
+    else:
+        find_locations(args.location, args.levels)
+    
+    for location in locations:
+        logger.info("Checking location: %s", location)
+        find_dups(location, filters, args.delete_duplicates, args.delete_empty_folders)
+
+    logger.info("Done!")
