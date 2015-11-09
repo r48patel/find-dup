@@ -13,6 +13,7 @@ import logging
 # Ideas:
 #   Add more types
 #   Collect how much space was(could be) saved at the end
+#	--dry-run
 #*********************************************
 
 hash_dict = {}
