@@ -8,6 +8,7 @@ import datetime
 import argparse
 import shutil
 import logging
+from enum import Enum
 
 #*********************************************
 # Ideas:
@@ -23,6 +24,8 @@ locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20)
 logger = logging.getLogger('find_dup')
+FILE_OPTIONS = Enum('File Options', 'Delete, Dry_Run, Rename')
+
 
 def is_picture(file):
     picture_ext = ["png", "jpeg", "dng", "NEF", "jpg", "JPG"]
@@ -40,7 +43,7 @@ def is_excluded(file):
 
     return file_ext not in excluded_exts
 
-def find_dups(location, filters, delete_duplicates, delete_empty_folders):
+def find_dups(location, filters, file_option, delete_empty_folders):
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
     
     for file in onlyfiles:
@@ -53,12 +56,16 @@ def find_dups(location, filters, delete_duplicates, delete_empty_folders):
             time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S.%f')
             file_renamed = hash_dict[file_hash] + "_" + time_stamp + "_" + file_name
             logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\t"
-            if delete_duplicates:
+            if file_option == FILE_OPTIONS.Delete:
                 logger_msg += "Deleted File!"
                 os.remove(file)
-            else:
+            elif file_option == FILE_OPTIONS.Rename:
                 os.rename(file, file_renamed)
                 logger_msg += "Renamed: \t" + file_renamed
+            elif file_option == FILE_OPTIONS.Dry_Run:
+                logger_msg += "No Action Taken!"
+            else:
+                sys.exit("Invalid option: %s", file_option)
             
             logger.info(logger_msg, 
                 hash_dict[file_hash],
@@ -128,6 +135,12 @@ if __name__== '__main__':
                          help=('Run scripts on custom location '
                                'Separate multiple locations with space'),
                          nargs='+')
+    parser.add_argument('--dry-run',
+                         help=('Run through the script '
+                               'but will not make any changes'),
+                         default=False,
+                         action='store_true',
+                         dest='dry_run')
     args = parser.parse_args()
 
     filters = [isfile]
@@ -143,15 +156,22 @@ if __name__== '__main__':
         only_ext=args.only_extension
         filters.append(is_custom_ext)
 
-    logger.info("Start!")
-    
     if args.custom_locations:
         locations = args.custom_locations
     else:
         find_locations(args.location, args.levels)
+
+    if args.dry_run:
+        file_option = FILE_OPTIONS.Dry_Run
+    elif args.delete_duplicates:
+        file_option = FILE_OPTIONS.Delete
+    else:
+        file_option = FILE_OPTIONS.Rename
+
+    logger.info("Start!")
     
     for location in locations:
         logger.info("Checking location: %s", location)
-        find_dups(location, filters, args.delete_duplicates, args.delete_empty_folders)
+        find_dups(location, filters, file_option, args.delete_empty_folders)
 
     logger.info("Done!")
