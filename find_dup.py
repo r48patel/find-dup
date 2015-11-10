@@ -15,6 +15,7 @@ from enum import Enum
 #*********************************************
 # Ideas:
 #   Add more types OR  Get rid of --type?
+#	Logger or file option for output
 #*********************************************
 
 hash_dict = {}
