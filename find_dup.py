@@ -1,3 +1,5 @@
+#!/usr/bin/env python2.7
+
 import sys
 import os
 from os.path import isfile, join, isdir, getsize
@@ -12,13 +14,12 @@ from enum import Enum
 
 #*********************************************
 # Ideas:
-#   Add more types
-#   Collect how much space was(could be) saved at the end
-#	--dry-run
+#   Add more types OR  Get rid of --type?
 #*********************************************
 
 hash_dict = {}
 only_ext = ''
+DUP_FILE_SIZE_BYTES = 0
 excluded_exts = []
 locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
@@ -44,6 +45,7 @@ def is_excluded(file):
     return file_ext not in excluded_exts
 
 def find_dups(location, filters, file_option, delete_empty_folders):
+    global DUP_FILE_SIZE_BYTES
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
     
     for file in onlyfiles:
@@ -54,22 +56,24 @@ def find_dups(location, filters, file_option, delete_empty_folders):
             hash_dict.update({file_hash:file})
         else:
             time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S.%f')
-            file_renamed = hash_dict[file_hash] + "_" + time_stamp + "_" + file_name
-            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\t"
+            new_file_name = hash_dict[file_hash] + "_" + time_stamp + "_" + file_name
+            file_size = getsize(file)
+            DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
+            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n\t" % (hash_dict[file_hash],
+                join(location, file_name), get_human_readable_size(file_size))
+
             if file_option == FILE_OPTIONS.Delete:
-                logger_msg += "Deleted File!"
                 os.remove(file)
+                logger_msg += "Deleted File!"
             elif file_option == FILE_OPTIONS.Rename:
-                os.rename(file, file_renamed)
-                logger_msg += "Renamed: \t" + file_renamed
+                os.rename(file, new_file_name)
+                logger_msg += "Renamed: \t" + new_file_name
             elif file_option == FILE_OPTIONS.Dry_Run:
                 logger_msg += "No Action Taken!"
             else:
                 sys.exit("Invalid option: %s", file_option)
             
-            logger.info(logger_msg, 
-                hash_dict[file_hash],
-                join(location, file_name))
+            logger.info(logger_msg)
 
     if delete_empty_folders:
         if len(os.listdir(location)) == 0:
@@ -86,7 +90,7 @@ def find_locations(start_location, levels):
         for folder in all_folders:
             find_locations(folder, levels-1)
 
-def GetHumanReadable(size,precision=2):
+def get_human_readable_size(size,precision=2):
     suffixes=['B','KB','MB','GB','TB']
     suffixIndex = 0
     while size > 1024:
@@ -174,4 +178,5 @@ if __name__== '__main__':
         logger.info("Checking location: %s", location)
         find_dups(location, filters, file_option, args.delete_empty_folders)
 
+    logger.info("Total space (potentiallly) saved: %s", get_human_readable_size(DUP_FILE_SIZE_BYTES))
     logger.info("Done!")
