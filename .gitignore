@@ -55,3 +55,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+#All things mine
+*test*

@@ -26,7 +26,7 @@ locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20)
 logger = logging.getLogger('find_dup')
-FILE_OPTIONS = Enum('File Options', 'Delete, Dry_Run, Rename')
+FILE_OPTIONS = Enum('File Options', 'delete, dry_run, rename')
 
 
 def is_picture(file):
@@ -63,13 +63,13 @@ def find_dups(location, filters, file_option, delete_empty_folders):
             logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n\t" % (hash_dict[file_hash],
                 join(location, file_name), get_human_readable_size(file_size))
 
-            if file_option == FILE_OPTIONS.Delete:
+            if file_option == FILE_OPTIONS.delete:
                 os.remove(file)
                 logger_msg += "Deleted File!"
-            elif file_option == FILE_OPTIONS.Rename:
+            elif file_option == FILE_OPTIONS.rename:
                 os.rename(file, new_file_name)
                 logger_msg += "Renamed: \t" + new_file_name
-            elif file_option == FILE_OPTIONS.Dry_Run:
+            elif file_option == FILE_OPTIONS.dry_run:
                 logger_msg += "No Action Taken!"
             else:
                 sys.exit("Invalid option: %s", file_option)
@@ -105,47 +105,38 @@ if __name__== '__main__':
     parser.add_argument('--location',
                         help=('Where do you want to start the search '
                               '(default: "%(default)s")'),
-                         default=os.getcwd())
+                        default=os.getcwd())
     parser.add_argument('--type',
-                         help=('What type of file to find dupicate for '
-                               '(default: %(default)s)'),
-                         choices=['pictures', 'all'],
-                         default='all')
+                        help=('What type of file to find dupicate for '
+                              '(default: %(default)s)'),
+                        choices=['pictures', 'all'],
+                        default='all')
     parser.add_argument('--only-extension',
-                         help=('compare files with given extension'))
+                        help=('compare files with given extension'))
     parser.add_argument('--exclude-extensions',
-                         help=('Which extensions should be ignored '
-                               'Separate multiple extensions with space'),
-                         nargs='+')
-    parser.add_argument('--delete-duplicates',
-                         help=('Delete any duplicate files found. '
-                               'By default the duplicate file will be renamed. '
-                               'FORMAT: originalFileName_timestamp_duplicateFileName '
-                               '(default: "%(default)s")'),
-                         default=False,
-                         action='store_true',
-                         dest='delete_duplicates')
+                        help=('Which extensions should be ignored '
+                              'Separate multiple extensions with space'),
+                        nargs='+')
+    parser.add_argument('--action',
+                        help=('Action to take when duplicate is found'),
+                        default="dry_run",
+                        choices=['rename', 'delete', 'dry_run'])
     parser.add_argument('--delete-empty-folders',
-                         help=('Delete any empty folders '
-                               '(default: "%(default)s")'),
-                         default=False,
-                         action='store_true',
-                         dest='delete_empty_folders')
+                        help=('Delete any empty folders '
+                              '(default: "%(default)s")'),
+                        default=False,
+                        action='store_true',
+                        dest='delete_empty_folders')
     parser.add_argument('--levels',
-                         help=('How many nested levels to itterate from root folder. '
-                               '(default: "%(default)s")'),
-                         default=1,
-                         type=int)
+                        help=('How many nested levels to itterate from root folder. '
+                              '(default: "%(default)s")'),
+                        default=1,
+                        type=int)
     parser.add_argument('--custom-locations',
-                         help=('Run scripts on custom location '
-                               'Separate multiple locations with space'),
-                         nargs='+')
-    parser.add_argument('--dry-run',
-                         help=('Run through the script '
-                               'but will not make any changes'),
-                         default=False,
-                         action='store_true',
-                         dest='dry_run')
+                        help=('Run scripts on custom location '
+                              'Separate multiple locations with space'),
+                        nargs='+')
+
     args = parser.parse_args()
 
     filters = [isfile]
@@ -166,12 +157,12 @@ if __name__== '__main__':
     else:
         find_locations(args.location, args.levels)
 
-    if args.dry_run:
-        file_option = FILE_OPTIONS.Dry_Run
-    elif args.delete_duplicates:
-        file_option = FILE_OPTIONS.Delete
-    else:
-        file_option = FILE_OPTIONS.Rename
+    if args.action == 'dry_run':
+        file_option = FILE_OPTIONS.dry_run
+    elif args.action == 'delete':
+        file_option = FILE_OPTIONS.delete
+    elif args.action == 'rename':
+        file_option = FILE_OPTIONS.rename
 
     logger.info("Start!")
     
