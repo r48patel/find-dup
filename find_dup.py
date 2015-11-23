@@ -27,10 +27,14 @@ FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20)
 logger = logging.getLogger('find_dup')
 FILE_OPTIONS = Enum('File Options', 'delete, dry_run, rename')
+TYPES = {
+    'pictures': ['png', 'jpeg', 'dng', 'NEF', 'jpg', 'JPG']
+    'movies': ['']
+}
 
 
 def is_picture(file):
-    picture_ext = ["png", "jpeg", "dng", "NEF", "jpg", "JPG"]
+    picture_ext = ['png', 'jpeg', 'dng', 'NEF', 'jpg', 'JPG']
     file_ext = file.split('.')[-1]
 
     return file_ext in picture_ext
