@@ -32,7 +32,8 @@ This script can be used to find any duplicate files.
 - Description: Default list of different extension for certain types of file
 - Type: String
 - Choices:
-    + pictures => ['png', 'jpeg', 'dng', 'NEF', 'jpg', 'JPG']
+    + pictures => ['png', 'jpeg', 'dng', 'NEF', 'jpg']
+    + movies => ['mov, mp4, wmv', 'avi', 'mpg']
 
 `--only-extension`
 - Description: Only look at files with given extensions.
@@ -51,22 +52,63 @@ This script can be used to find any duplicate files.
 - Example: `python finde_dup.py --location some/location --delete-empty-folders`
 
 ##Usage
+- Base directory search (will not include any subdirectories)
+    + `python find_dup.py --location some/location`
+    + `python find_dup.py --location some/location --level=1`
+    + Search current directory
+        * `python find_dup.py`
+    + Search current directory and delete empty folders
+        * `python find_dup.py --delete-empty-folders`
+
+- Include subdirectories (upto N level)
+    + `pyhton find_dup.py -`
+
 
 ##Requirement
+Following packages are required for this script to run. Instruction on how to install packages is below.
+- enum34
 
-
-###Installing Python packages on Windows
+##Installint Python packages
+###Windows
 1. Add python to `path` via cmd line
+
+>If you already have python in your path, skip to step 2.
 
 ```
 D:\>set path=%path%;D:\Python27
 ```
 > Typically Python file are under 'C:\Python27'. Make sure to check your location.
-	
-2. Instal pip by following these [instructions](https://pip.pypa.io/en/latest/installing/)
+
+2. Install pip by following these [instructions](https://pip.pypa.io/en/latest/installing/)
+
+>If you already have pip installed, skip to step 3.
 
 3. Install packages via pip
 
+```
+$ pip install enum34
+```
+
+To use requirement.txt
+
+```
+$ pip install -r requirement.txt
+```
+
+###Mac
+1. Install Homebrew by following these [instrictions](http://brew.sh/)
+
+>If you already have homebrew installed, skip to step 2.
+
+2. Install pip
+
+>if you already have python/pip installed, skip to step 3.
+
+```
+$ brew install python
+```
+
+3. Install pacakges via pip
 ```
 $ pip install enum34
 ```

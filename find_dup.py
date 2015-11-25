@@ -14,8 +14,8 @@ from enum import Enum
 
 #*********************************************
 # Ideas:
-#   Add more types OR  Get rid of --type?
 #	Logger or file option for output
+#       gmail.py type of feature where you can read file and apply action.
 #*********************************************
 
 hash_dict = {}
@@ -28,26 +28,25 @@ logging.basicConfig(format=FORMAT, level=20)
 logger = logging.getLogger('find_dup')
 FILE_OPTIONS = Enum('File Options', 'delete, dry_run, rename')
 TYPES = {
-    'pictures': ['png', 'jpeg', 'dng', 'NEF', 'jpg', 'JPG']
-    'movies': ['']
+    'pictures': ['png', 'jpeg', 'dng', 'nef', 'jpg']
+    'movies': ['mov, mp4, wmv', 'avi', 'mpg']
 }
 
 
-def is_picture(file):
-    picture_ext = ['png', 'jpeg', 'dng', 'NEF', 'jpg', 'JPG']
-    file_ext = file.split('.')[-1]
+def get_file_ext(file):
+    return file.split('.')[-1].lower()
 
-    return file_ext in picture_ext
+def is_picture(file):
+    return get_file_ext(file) in TYPES['pictures']
+
+def is_movie(file):
+    return get_file_ext(file) in TYPES['movies']
 
 def is_custom_ext(file):
-    file_ext = file.split('.')[-1]
-
-    return file_ext == only_ext    
+    return get_file_ext(file) == only_ext    
 
 def is_excluded(file):
-    file_ext = file.split('.')[-1]
-
-    return file_ext not in excluded_exts
+    return get_file_ext(file) not in excluded_exts
 
 def find_dups(location, filters, file_option, delete_empty_folders):
     global DUP_FILE_SIZE_BYTES
@@ -113,7 +112,7 @@ if __name__== '__main__':
     parser.add_argument('--type',
                         help=('What type of file to find dupicate for '
                               '(default: %(default)s)'),
-                        choices=['pictures', 'all'],
+                        choices=['movies', 'pictures', 'all'],
                         default='all')
     parser.add_argument('--only-extension',
                         help=('compare files with given extension'))
@@ -147,6 +146,9 @@ if __name__== '__main__':
 
     if args.type == 'pictures':
         filters.append(is_picture)
+
+    if args.type == 'movies':
+        filters.append(is_movie)
 
     if args.exclude_extensions:
         excluded_exts=args.exclude_extensions
