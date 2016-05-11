@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>Find-dup by r48patel</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Find-dup</h1>
+        <h2></h2>
+
+        <section id="downloads">
+          <a href="https://github.com/r48patel/find-dup/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/r48patel/find-dup/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/r48patel/find-dup" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a id="find-duplicates" class="anchor" href="#find-duplicates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Find Duplicates</h1>
+
+<p>This script can be used to find any duplicate files. </p>
+
+<h2>
+<a id="available-options" class="anchor" href="#available-options" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Available Options</h2>
+
+<p><code>--location</code> </p>
+
+<ul>
+<li>Description: The root level location where to start the search.</li>
+<li>Type: String</li>
+<li>Default: The working directory of script.</li>
+<li>Example: <code>python find_dup.py --location some/root/location/</code>
+</li>
+</ul>
+
+<p><code>--custom-locations</code> </p>
+
+<ul>
+<li>Description: List of custom location to check.</li>
+<li>Type: list (space separated parameter values)</li>
+<li>Example: <code>python find_dup.py --custom-locations location/one/ location/two/</code>
+</li>
+</ul>
+
+<p><code>--levels</code></p>
+
+<ul>
+<li>Description: How many levels to check from the root level</li>
+<li>Type: Integer</li>
+<li>Default: 1 (only check root folder)</li>
+<li>Example: <code>python find_dup.py --location some/location --levels 2</code>
+</li>
+</ul>
+
+<p><code>--action</code></p>
+
+<ul>
+<li>Description: What actions to take when duplicate files are found</li>
+<li>Type: String</li>
+<li>Choices: 
+
+<ul>
+<li>dry_run</li>
+<li>rename</li>
+<li>delete</li>
+</ul>
+</li>
+<li>Default: dry_run</li>
+</ul>
+
+<p><code>--type</code></p>
+
+<ul>
+<li>Description: Default list of different extension for certain types of file</li>
+<li>Type: String</li>
+<li>Choices:
+
+<ul>
+<li>pictures =&gt; ['png', 'jpeg', 'dng', 'NEF', 'jpg']</li>
+<li>movies =&gt; ['mov, mp4, wmv', 'avi', 'mpg']</li>
+</ul>
+</li>
+</ul>
+
+<p><code>--only-extension</code></p>
+
+<ul>
+<li>Description: Only look at files with given extensions.</li>
+<li>Type: List</li>
+<li>Example: <code>python find_dup.py --location some/location --only-extensions exe1 exe2 pdf</code>
+</li>
+</ul>
+
+<p><code>--exclude-extensions</code></p>
+
+<ul>
+<li>Description: Do not look at file with given extensions.</li>
+<li>Type: List</li>
+<li>Example: <code>python find_dup.py --location some/location --only-extensions mov mp4</code>
+</li>
+</ul>
+
+<p><code>--delete-empty-folders</code></p>
+
+<ul>
+<li>Description: If there are no files in the folder, after either deleting or renaming,<br>
+</li>
+<li>Type: Boolean</li>
+<li>Default: False</li>
+<li>Example: <code>python finde_dup.py --location some/location --delete-empty-folders</code>
+</li>
+</ul>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
+
+<ul>
+<li>
+<p>Base directory search (will not include any subdirectories)</p>
+
+<ul>
+<li><code>python find_dup.py --location some/location</code></li>
+<li><code>python find_dup.py --location some/location --level=1</code></li>
+<li>Search current directory
+
+<ul>
+<li><code>python find_dup.py</code></li>
+</ul>
+</li>
+<li>Search current directory and delete empty folders
+
+<ul>
+<li><code>python find_dup.py --delete-empty-folders</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Include subdirectories (upto N level)</p>
+
+<ul>
+<li><code>pyhton find_dup.py -</code></li>
+</ul>
+</li>
+</ul>
+
+<h2>
+<a id="requirement" class="anchor" href="#requirement" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirement</h2>
+
+<p>Following packages are required for this script to run. Instruction on how to install packages is below.</p>
+
+<ul>
+<li>enum34</li>
+</ul>
+
+<h2>
+<a id="installint-python-packages" class="anchor" href="#installint-python-packages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installint Python packages</h2>
+
+<h3>
+<a id="windows" class="anchor" href="#windows" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Windows</h3>
+
+<ol>
+<li>Add python to <code>path</code> via cmd line</li>
+</ol>
+
+<blockquote>
+<p>If you already have python in your path, skip to step 2.</p>
+</blockquote>
+
+<pre><code>D:\&gt;set path=%path%;D:\Python27
+</code></pre>
+
+<blockquote>
+<p>Typically Python file are under 'C:\Python27'. Make sure to check your location.</p>
+</blockquote>
+
+<ol>
+<li>Install pip by following these <a href="https://pip.pypa.io/en/latest/installing/">instructions</a>
+</li>
+</ol>
+
+<blockquote>
+<p>If you already have pip installed, skip to step 3.</p>
+</blockquote>
+
+<ol>
+<li>Install packages via pip</li>
+</ol>
+
+<pre><code>$ pip install enum34
+</code></pre>
+
+<p>To use requirement.txt</p>
+
+<pre><code>$ pip install -r requirement.txt
+</code></pre>
+
+<h3>
+<a id="mac" class="anchor" href="#mac" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Mac</h3>
+
+<ol>
+<li>Install Homebrew by following these <a href="http://brew.sh/">instrictions</a>
+</li>
+</ol>
+
+<blockquote>
+<p>If you already have homebrew installed, skip to step 2.</p>
+</blockquote>
+
+<ol>
+<li>Install pip</li>
+</ol>
+
+<blockquote>
+<p>if you already have python/pip installed, skip to step 3.</p>
+</blockquote>
+
+<pre><code>$ brew install python
+</code></pre>
+
+<ol>
+<li>Install pacakges via pip</li>
+</ol>
+
+<pre><code>$ pip install enum34
+</code></pre>
+
+<p>To use requirement.txt</p>
+
+<pre><code>$ pip install -r requirement.txt
+</code></pre>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
