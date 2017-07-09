@@ -26,9 +26,9 @@ locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20)
 logger = logging.getLogger('find_dup')
-FILE_OPTIONS = Enum('File Options', 'delete, dry_run, rename')
+FILE_OPTIONS = Enum('File Options', 'delete, dry_run, move')
 TYPES = {
-    'pictures': ['png', 'jpeg', 'dng', 'nef', 'jpg']
+    'pictures': ['png', 'jpeg', 'dng', 'nef', 'jpg'],
     'movies': ['mov, mp4, wmv', 'avi', 'mpg']
 }
 
@@ -51,7 +51,7 @@ def is_excluded(file):
 def find_dups(location, filters, file_option, delete_empty_folders):
     global DUP_FILE_SIZE_BYTES
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
-    
+    counter = 0    
     for file in onlyfiles:
         file_name = file.split(os.sep)[-1]
 
@@ -59,19 +59,25 @@ def find_dups(location, filters, file_option, delete_empty_folders):
         if file_hash not in hash_dict:
             hash_dict.update({file_hash:file})
         else:
-            time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S.%f')
-            new_file_name = hash_dict[file_hash] + "_" + time_stamp + "_" + file_name
+            dup_dir = join(location, 'duplicates')
+            
+            if not os.path.exists(dup_dir):
+                os.mkdir(dup_dir)
+            time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S.%f') 
             file_size = getsize(file)
             DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
-            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n\t" % (hash_dict[file_hash],
+            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n" % (hash_dict[file_hash],
                 join(location, file_name), get_human_readable_size(file_size))
 
             if file_option == FILE_OPTIONS.delete:
                 os.remove(file)
                 logger_msg += "Deleted File!"
-            elif file_option == FILE_OPTIONS.rename:
-                os.rename(file, new_file_name)
-                logger_msg += "Renamed: \t" + new_file_name
+            elif file_option == FILE_OPTIONS.move:
+                logger_msg += "\t\tMoving: %s\n" % file
+                os.rename(file, join(dup_dir, file_name))
+                if os.path.exists(hash_dict[file_hash]):
+                    logger_msg += "\t\tMoving: %s\n" % hash_dict[file_hash]
+                    os.rename(hash_dict[file_hash], join(dup_dir, hash_dict[file_hash]))
             elif file_option == FILE_OPTIONS.dry_run:
                 logger_msg += "No Action Taken!"
             else:
@@ -123,7 +129,7 @@ if __name__== '__main__':
     parser.add_argument('--action',
                         help=('Action to take when duplicate is found'),
                         default="dry_run",
-                        choices=['rename', 'delete', 'dry_run'])
+                        choices=['move', 'delete', 'dry_run'])
     parser.add_argument('--delete-empty-folders',
                         help=('Delete any empty folders '
                               '(default: "%(default)s")'),
@@ -167,8 +173,8 @@ if __name__== '__main__':
         file_option = FILE_OPTIONS.dry_run
     elif args.action == 'delete':
         file_option = FILE_OPTIONS.delete
-    elif args.action == 'rename':
-        file_option = FILE_OPTIONS.rename
+    elif args.action == 'move':
+        file_option = FILE_OPTIONS.move
 
     logger.info("Start!")
     
