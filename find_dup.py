@@ -24,7 +24,7 @@ DUP_FILE_SIZE_BYTES = 0
 excluded_exts = []
 locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
-logging.basicConfig(format=FORMAT, level=20)
+logging.basicConfig(format=FORMAT, level=20, stream=sys.stdout)
 logger = logging.getLogger('find_dup')
 FILE_OPTIONS = Enum('File Options', 'delete, dry_run, move')
 TYPES = {
@@ -51,7 +51,8 @@ def is_excluded(file):
 def find_dups(location, filters, file_option, delete_empty_folders):
     global DUP_FILE_SIZE_BYTES
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
-    counter = 0    
+    counter = 0
+    onlyfiles.reverse()
     for file in onlyfiles:
         file_name = file.split(os.sep)[-1]
 
@@ -63,11 +64,13 @@ def find_dups(location, filters, file_option, delete_empty_folders):
             
             if not os.path.exists(dup_dir):
                 os.mkdir(dup_dir)
-            time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S.%f') 
+
             file_size = getsize(file)
             DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
-            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n" % (hash_dict[file_hash],
-                join(location, file_name), get_human_readable_size(file_size))
+            original_file = hash_dict[file_hash]
+            duplicate_file = join(location, file_name)
+            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n" % (original_file,
+                duplicate_file, get_human_readable_size(file_size))
 
             if file_option == FILE_OPTIONS.delete:
                 os.remove(file)
@@ -126,10 +129,13 @@ if __name__== '__main__':
                         help=('Which extensions should be ignored '
                               'Separate multiple extensions with space'),
                         nargs='+')
-    parser.add_argument('--action',
-                        help=('Action to take when duplicate is found'),
-                        default="dry_run",
-                        choices=['move', 'delete', 'dry_run'])
+    
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('--dry-run', nargs='?', dest='file_option', const=FILE_OPTIONS.dry_run, help='Dry run. Display duplicates but no actions taken')
+    action.add_argument('--move', nargs='?', dest='file_option', const=FILE_OPTIONS.move, help='Move duplicates file under a folder named duplicate')
+    action.add_argument('--delete', nargs='?', dest='file_option', const=FILE_OPTIONS.delete, help='Delete duplicate files')
+
+
     parser.add_argument('--delete-empty-folders',
                         help=('Delete any empty folders '
                               '(default: "%(default)s")'),
@@ -169,18 +175,12 @@ if __name__== '__main__':
     else:
         find_locations(args.location, args.levels)
 
-    if args.action == 'dry_run':
-        file_option = FILE_OPTIONS.dry_run
-    elif args.action == 'delete':
-        file_option = FILE_OPTIONS.delete
-    elif args.action == 'move':
-        file_option = FILE_OPTIONS.move
 
     logger.info("Start!")
     
     for location in locations:
         logger.info("Checking location: %s", location)
-        find_dups(location, filters, file_option, args.delete_empty_folders)
+        find_dups(location, filters, args.file_option, args.delete_empty_folders)
 
     logger.info("Total space (potentiallly) saved: %s", get_human_readable_size(DUP_FILE_SIZE_BYTES))
     logger.info("Done!")
