@@ -11,6 +11,7 @@ import argparse
 import shutil
 import logging
 from enum import Enum
+from prettytable import PrettyTable
 
 #*********************************************
 # Ideas:
@@ -36,6 +37,9 @@ TYPES = {
 def get_file_ext(file):
     return file.split('.')[-1].lower()
 
+def is_ds_store(file):
+    return not get_file_ext(file) == 'ds_store'
+
 def is_picture(file):
     return get_file_ext(file) in TYPES['pictures']
 
@@ -48,11 +52,13 @@ def is_custom_ext(file):
 def is_excluded(file):
     return get_file_ext(file) not in excluded_exts
 
-def find_dups(location, filters, file_option, delete_empty_folders):
+def find_dups(location, dup_dir, filters, file_option, delete_empty_folders):
     global DUP_FILE_SIZE_BYTES
     onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
     counter = 0
     onlyfiles.reverse()
+    info_table = PrettyTable(['Original File', 'Duplicate File', 'Size', 'Action'])
+    info_table.align = 'l'
     for file in onlyfiles:
         file_name = file.split(os.sep)[-1]
 
@@ -60,33 +66,39 @@ def find_dups(location, filters, file_option, delete_empty_folders):
         if file_hash not in hash_dict:
             hash_dict.update({file_hash:file})
         else:
-            dup_dir = join(location, 'duplicates')
-            
-            if not os.path.exists(dup_dir):
-                os.mkdir(dup_dir)
-
-            file_size = getsize(file)
-            DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
             original_file = hash_dict[file_hash]
-            duplicate_file = join(location, file_name)
-            logger_msg = "Duplicate item found! \n\tOriginal: \t%s \n\tDuplicate: \t%s \n\tSize: \t%s \n" % (original_file,
-                duplicate_file, get_human_readable_size(file_size))
+            file_size = getsize(file)
+            
+
+            DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
+            duplicate_file = file
+            # logger_msg = "Duplicate item found! \n\tOriginal: \t\t%s \n\tDuplicate: \t\t%s \n\tMove Location: \t\t%s \n\tSize: \t\t\t%s \n" % (original_file, duplicate_file, dup_dir, get_human_readable_size(file_size))
+            info=[original_file, duplicate_file, get_human_readable_size(file_size)]
 
             if file_option == FILE_OPTIONS.delete:
                 os.remove(file)
-                logger_msg += "Deleted File!"
+                info.append('Deleted File!')
+                # logger_msg += "Deleted File!"
             elif file_option == FILE_OPTIONS.move:
-                logger_msg += "\t\tMoving: %s\n" % file
+                if not os.path.exists(dup_dir):
+                    logger.info("Creating dir: %s" % dup_dir)
+                    os.mkdir(dup_dir)
+                # logger_msg += "\t\tMoving: %s\n" % file
                 os.rename(file, join(dup_dir, file_name))
-                if os.path.exists(hash_dict[file_hash]):
-                    logger_msg += "\t\tMoving: %s\n" % hash_dict[file_hash]
-                    os.rename(hash_dict[file_hash], join(dup_dir, hash_dict[file_hash]))
+                info.append('Moved File!')
+                # if os.path.exists(hash_dict[file_hash]):
+                    # logger_msg += "\t\tMoving: %s\n" % hash_dict[file_hash]
+                    # os.rename(hash_dict[file_hash], join(dup_dir, hash_dict[file_hash]))
             elif file_option == FILE_OPTIONS.dry_run:
-                logger_msg += "No Action Taken!"
+                # logger_msg += "No Action Taken!"
+                info.append('Dry Run!')
             else:
                 sys.exit("Invalid option: %s", file_option)
             
-            logger.info(logger_msg)
+            # logger.info(logger_msg)
+            info_table.add_row(info)
+
+    print info_table.get_string()
 
     if delete_empty_folders:
         if len(os.listdir(location)) == 0:
@@ -112,7 +124,6 @@ def get_human_readable_size(size,precision=2):
     return "%.*f %s"%(precision,size,suffixes[suffixIndex])
 
 if __name__== '__main__':
-
     parser = argparse.ArgumentParser('Find Duplicates')
     parser.add_argument('--location',
                         help=('Where do you want to start the search '
@@ -153,8 +164,7 @@ if __name__== '__main__':
                         nargs='+')
 
     args = parser.parse_args()
-
-    filters = [isfile]
+    filters = [isfile,is_ds_store]
 
     if args.type == 'pictures':
         filters.append(is_picture)
@@ -163,11 +173,10 @@ if __name__== '__main__':
         filters.append(is_movie)
 
     if args.exclude_extensions:
-        excluded_exts=args.exclude_extensions
-        filters.append(is_excluded)
+        excluded_exts =  args.exclude_extensions
 
     if args.only_extension:
-        only_ext=args.only_extension
+        only_ext = args.only_extension
         filters.append(is_custom_ext)
 
     if args.custom_locations:
@@ -180,7 +189,9 @@ if __name__== '__main__':
     
     for location in locations:
         logger.info("Checking location: %s", location)
-        find_dups(location, filters, args.file_option, args.delete_empty_folders)
+        dup_dir = join(location, 'duplicates')
+        logger.info("Duplication location: %s" % dup_dir )
+        find_dups(location, dup_dir, filters, args.file_option, args.delete_empty_folders)
 
     logger.info("Total space (potentiallly) saved: %s", get_human_readable_size(DUP_FILE_SIZE_BYTES))
     logger.info("Done!")
