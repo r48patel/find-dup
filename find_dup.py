@@ -3,7 +3,6 @@
 import sys
 import os
 from os.path import isfile, join, isdir, getsize
-import md5
 import hashlib
 import time
 import datetime
@@ -12,6 +11,7 @@ import shutil
 import logging
 from enum import Enum
 from prettytable import PrettyTable
+import re
 
 #*********************************************
 # Ideas:
@@ -23,7 +23,6 @@ hash_dict = {}
 only_ext = ''
 DUP_FILE_SIZE_BYTES = 0
 excluded_exts = []
-locations = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20, stream=sys.stdout)
 logger = logging.getLogger('find_dup')
@@ -37,20 +36,45 @@ TYPES = {
 def get_file_ext(file):
     return file.split('.')[-1].lower()
 
+
 def is_ds_store(file):
     return not get_file_ext(file) == 'ds_store'
+
 
 def is_picture(file):
     return get_file_ext(file) in TYPES['pictures']
 
+
 def is_movie(file):
     return get_file_ext(file) in TYPES['movies']
+
 
 def is_custom_ext(file):
     return get_file_ext(file) == only_ext    
 
+
 def is_excluded(file):
     return get_file_ext(file) not in excluded_exts
+
+def is_not_hidden(file):
+    return not re.match("^\.[a-zA-Z]", file)
+
+
+def take_action(file_option, file, file_name, dup_dir):
+    if file_option == FILE_OPTIONS.delete:
+        os.remove(file)
+        return 'Deleted File!'
+    elif file_option == FILE_OPTIONS.move:
+        if not os.path.exists(dup_dir):
+            logger.info("Creating dir: %s" % dup_dir)
+            os.mkdir(dup_dir)
+        os.rename(file, join(dup_dir, file_name))
+        return 'Moved File!'
+    elif file_option == FILE_OPTIONS.dry_run:
+        return 'Dry Run!'
+    else:
+        sys.exit("Invalid option: %s", file_option)
+
 
 def find_dups(location, dup_dir, filters, file_option, delete_empty_folders):
     global DUP_FILE_SIZE_BYTES
@@ -72,30 +96,10 @@ def find_dups(location, dup_dir, filters, file_option, delete_empty_folders):
 
             DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
             duplicate_file = file
-            # logger_msg = "Duplicate item found! \n\tOriginal: \t\t%s \n\tDuplicate: \t\t%s \n\tMove Location: \t\t%s \n\tSize: \t\t\t%s \n" % (original_file, duplicate_file, dup_dir, get_human_readable_size(file_size))
             info=[original_file, duplicate_file, get_human_readable_size(file_size)]
 
-            if file_option == FILE_OPTIONS.delete:
-                os.remove(file)
-                info.append('Deleted File!')
-                # logger_msg += "Deleted File!"
-            elif file_option == FILE_OPTIONS.move:
-                if not os.path.exists(dup_dir):
-                    logger.info("Creating dir: %s" % dup_dir)
-                    os.mkdir(dup_dir)
-                # logger_msg += "\t\tMoving: %s\n" % file
-                os.rename(file, join(dup_dir, file_name))
-                info.append('Moved File!')
-                # if os.path.exists(hash_dict[file_hash]):
-                    # logger_msg += "\t\tMoving: %s\n" % hash_dict[file_hash]
-                    # os.rename(hash_dict[file_hash], join(dup_dir, hash_dict[file_hash]))
-            elif file_option == FILE_OPTIONS.dry_run:
-                # logger_msg += "No Action Taken!"
-                info.append('Dry Run!')
-            else:
-                sys.exit("Invalid option: %s", file_option)
+            info.append(take_action(file_option, file, file_name, dup_dir))
             
-            # logger.info(logger_msg)
             info_table.add_row(info)
 
     print info_table.get_string()
@@ -105,15 +109,21 @@ def find_dups(location, dup_dir, filters, file_option, delete_empty_folders):
             shutil.rmtree(location)
             logger.info("Folder deleted: %s", location)
 
+    return info_table
+
 
 def find_locations(start_location, levels):
+    found_locations = []
     if levels == 1:
-        locations.append(start_location)
+        found_locations.append(start_location)
     else:
-        locations.append(start_location)
-        all_folders = [ join(start_location, d) for d in os.listdir(start_location) if isdir(join(start_location, d)) ]
+        found_locations.append(start_location)
+        all_folders = [ join(start_location, d) for d in os.listdir(start_location) if is_not_hidden(d) and d != '__pycache__' and isdir(join(start_location, d)) ]
         for folder in all_folders:
-            find_locations(folder, levels-1)
+            found_locations += find_locations(folder, levels-1)
+
+    return found_locations
+
 
 def get_human_readable_size(size,precision=2):
     suffixes=['B','KB','MB','GB','TB']
@@ -164,7 +174,7 @@ if __name__== '__main__':
                         nargs='+')
 
     args = parser.parse_args()
-    filters = [isfile,is_ds_store]
+    filters = [is_not_hidden,isfile,is_ds_store]
 
     if args.type == 'pictures':
         filters.append(is_picture)
@@ -182,7 +192,7 @@ if __name__== '__main__':
     if args.custom_locations:
         locations = args.custom_locations
     else:
-        find_locations(args.location, args.levels)
+        locations = find_locations(args.location, args.levels)
 
 
     logger.info("Start!")
