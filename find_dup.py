@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -12,6 +12,7 @@ import logging
 from enum import Enum
 from prettytable import PrettyTable
 import re
+import collections
 
 #*********************************************
 # Ideas:
@@ -19,16 +20,14 @@ import re
 #       gmail.py type of feature where you can read file and apply action.
 #*********************************************
 
-hash_dict = {}
 only_ext = ''
-DUP_FILE_SIZE_BYTES = 0
 excluded_exts = []
 FORMAT = '%(module)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT, level=20, stream=sys.stdout)
 logger = logging.getLogger('find_dup')
 FILE_OPTIONS = Enum('File Options', 'delete, dry_run, move')
 TYPES = {
-    'pictures': ['png', 'jpeg', 'dng', 'nef', 'jpg'],
+    'pictures': ['png', 'jpeg', 'dng', 'nef', 'jpg', 'NEF'],
     'movies': ['mov, mp4, wmv', 'avi', 'mpg']
 }
 
@@ -80,33 +79,32 @@ def take_action(file_option, file, dup_dir):
         sys.exit("Invalid option: %s", file_option)
 
 
-def find_dups(location, dup_dir, filters, file_option, delete_empty_folders):
-    duplicates_dict = {}
-    global DUP_FILE_SIZE_BYTES
-    onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
-    counter = 0
-    onlyfiles.reverse()
-    
-    for file in onlyfiles:
-        file_hash = hashlib.md5(open(file, 'rb').read()).hexdigest()
-        if file_hash not in hash_dict:
-            hash_dict.update({file_hash:file})
-        else:
-            original_file = hash_dict[file_hash]
-            if original_file not in duplicates_dict:
-                duplicates_dict[original_file] = []
-            duplicates_dict[original_file].append(file)
-            file_size = getsize(file)
-            
+def find_dups(locations, filters, delete_empty_folders):
+    duplicates_dict = collections.OrderedDict()
+    hash_dict = {}
 
-            DUP_FILE_SIZE_BYTES = DUP_FILE_SIZE_BYTES + file_size
-            duplicate_file = file
+    for location in locations:
+        logger.info("Checking location: %s", location)
+        onlyfiles = [ join(location,f) for f in os.listdir(location) if all(fil(join(location,f)) for fil in filters) ]
+        counter = 0
+        onlyfiles.sort()
+        
+        for file in onlyfiles:
+            file_hash = hashlib.md5(open(file, 'rb').read()).hexdigest()
             
-
-    if delete_empty_folders:
-        if len(os.listdir(location)) == 0:
-            shutil.rmtree(location)
-            logger.info("Folder deleted: %s", location)
+            if file_hash not in hash_dict:
+                hash_dict.update({file_hash:file})
+            else:
+                original_file = hash_dict[file_hash]
+                
+                if original_file not in duplicates_dict:
+                    duplicates_dict[original_file] = []
+                duplicates_dict[original_file].append(file)
+                
+        if delete_empty_folders:
+            if len(os.listdir(location)) == 0:
+                shutil.rmtree(location)
+                logger.info("Folder deleted: %s", location)
 
     return duplicates_dict
 
@@ -121,6 +119,7 @@ def find_locations(start_location, levels):
         for folder in all_folders:
             found_locations += find_locations(folder, levels-1)
 
+    found_locations.sort()
     return found_locations
 
 
@@ -174,6 +173,9 @@ if __name__== '__main__':
 
     args = parser.parse_args()
     filters = [is_not_hidden,isfile,is_ds_store]
+    info_table = PrettyTable(['Original File', 'Duplicate File', 'Size', 'Action'])
+    info_table.align = 'l'
+    total_size_saved = 0
 
     if args.type == 'pictures':
         filters.append(is_picture)
@@ -196,23 +198,14 @@ if __name__== '__main__':
 
     logger.info("Start!")
 
-    all_duplicates = {}
-    
-    for location in locations:
-        logger.info("Checking location: %s", location)
-        dup_dir = join(location, 'duplicates')
-        logger.info("Duplication location: %s" % dup_dir )
-        all_duplicates.update(find_dups(location, dup_dir, filters, args.file_option, args.delete_empty_folders))
-
-    info_table = PrettyTable(['Original File', 'Duplicate File', 'Size', 'Action'])
-    info_table.align = 'l'
-    
+    all_duplicates = find_dups(locations, filters, args.delete_empty_folders)
 
     for file in all_duplicates:
         isFirst = True
         for dup_file in all_duplicates[file]:
-            file_size = get_human_readable_size(getsize(dup_file))
-            info = [dup_file, file_size]
+            file_size = getsize(dup_file)
+            total_size_saved = total_size_saved + file_size
+            info = [dup_file, get_human_readable_size(file_size)]
 
             if isFirst:
                 info.insert(0, file)
@@ -220,9 +213,9 @@ if __name__== '__main__':
             else:
                 info.insert(0, '')
             
-            info.append(take_action(args.file_option, dup_file, dup_dir))
+            info.append(take_action(args.file_option, dup_file, 'dup_dir'))
             info_table.add_row(info)
 
-    print info_table.get_string()
-    logger.info("Total space (potentiallly) saved: %s", get_human_readable_size(DUP_FILE_SIZE_BYTES))
+    print(info_table.get_string())
+    logger.info("Total space (potentiallly) saved: %s", get_human_readable_size(total_size_saved))
     logger.info("Done!")
